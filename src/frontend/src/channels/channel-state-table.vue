@@ -128,6 +128,9 @@
             <div v-if="currentState.forcedOffBySensor === true">
                 <span class="label label-info">{{ $t('Forced off by sensor') }}</span>
             </div>
+            <div v-if="currentState.calibrationError === true">
+                <span class="label label-danger">{{ $t('Calibration error') }}</span>
+            </div>
         </div>
     </div>
 </template>
