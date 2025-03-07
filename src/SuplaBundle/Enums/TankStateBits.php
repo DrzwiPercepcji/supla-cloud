@@ -17,27 +17,15 @@
 
 namespace SuplaBundle\Enums;
 
-use MyCLabs\Enum\Enum;
-
 /**
- * @method static ConnectionStatus NOT_CONNECTED()
- * @method static ConnectionStatus CONNECTED()
- * @method static ConnectionStatus CONNECTED_NOT_AVAILABLE()
- * @method static ConnectionStatus OFFLINE_REMOTE_WAKEUP_NOT_SUPPORTED()
- * @method static ConnectionStatus FIRMWARE_UPDATE_ONGOING()
+ * @method static TankStateBits WARNING_LEVEL()
+ * @method static TankStateBits ALARM_LEVEL()
+ * @method static TankStateBits INVALID_SENSOR_STATE()
+ * @method static TankStateBits SOUND_ALARM_ON()
  */
-final class ConnectionStatus extends Enum {
-    const NOT_CONNECTED = 0;
-    const CONNECTED = 1;
-    const CONNECTED_NOT_AVAILABLE = 2;
-    const OFFLINE_REMOTE_WAKEUP_NOT_SUPPORTED = 3;
-    const FIRMWARE_UPDATE_ONGOING = 4;
-
-    public function isConnected(): bool {
-        return in_array($this->value, [
-            self::CONNECTED,
-            self::CONNECTED_NOT_AVAILABLE,
-            self::FIRMWARE_UPDATE_ONGOING,
-        ], true);
-    }
+final class TankStateBits extends ChannelFunctionBits {
+    const WARNING_LEVEL = 1 << 0;
+    const ALARM_LEVEL = 1 << 1;
+    const INVALID_SENSOR_STATE = 1 << 2;
+    const SOUND_ALARM_ON = 1 << 3;
 }

@@ -681,9 +681,9 @@ class DevicesFixture extends SuplaFixture {
             [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR],
             [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR],
             [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR],
-            [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR, ['subDeviceId' => 1]],
-            [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR, ['subDeviceId' => 1]],
-            [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR, ['subDeviceId' => 1]],
+            [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR, ['subDeviceId' => 11]],
+            [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR, ['subDeviceId' => 11]],
+            [ChannelType::SENSORNO, ChannelFunction::CONTAINER_LEVEL_SENSOR, ['subDeviceId' => 11]],
             [
                 ChannelType::VALVEOPENCLOSE,
                 ChannelFunction::VALVEOPENCLOSE,
@@ -701,12 +701,30 @@ class DevicesFixture extends SuplaFixture {
             [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR],
             [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR],
             [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR],
-            [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR, ['subDeviceId' => 2]],
-            [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR, ['subDeviceId' => 2]],
-            [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR, ['subDeviceId' => 2]],
+            [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR, ['subDeviceId' => 23]],
+            [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR, ['subDeviceId' => 23]],
+            [ChannelType::SENSORNO, ChannelFunction::FLOOD_SENSOR, ['subDeviceId' => 23]],
+            [
+                ChannelType::CONTAINER,
+                ChannelFunction::WATER_TANK,
+                [
+                    'caption' => 'Full fill level tank',
+                    'userConfig' => json_encode([
+                        'warningAboveLevel' => 20,
+                        'alarmAboveLevel' => 30,
+                        'warningBelowLevel' => 40,
+                        'alarmBelowLevel' => 50,
+                        'muteAlarmSoundWithoutAdditionalAuth' => false,
+                        'sensors' => [
+                            ['channelNo' => 1, 'fillLevel' => 20],
+                        ],
+                    ]),
+                    'flags' => ChannelFunctionBitsFlags::TANK_FILL_LEVEL_REPORTING_IN_FULL_RANGE,
+                ],
+            ],
         ]);
         $this->entityManager->persist(AnyFieldSetter::set(new SubDevice(), [
-            'id' => 2,
+            'id' => 23,
             'device' => $device,
             'regDate' => new DateTime(),
             'name' => 'Flood sensor sub device',

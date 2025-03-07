@@ -23,10 +23,12 @@
     import ChannelFunction from "../common/enums/channel-function";
     import {ChannelFunctionTriggers} from "@/channels/reactions/channel-function-triggers";
     import EventBus from "@/common/event-bus";
+    import {mapStores} from "pinia";
+    import {useChannelsStore} from "@/stores/channels-store";
 
     export default {
         props: {
-            channel: Object,
+            channelId: Number,
         },
         data() {
             return {
@@ -59,11 +61,11 @@
                         header: 'Notifications', // i18n
                     });
                 }
-                if (this.channel.actionTriggersIds?.length || isActionTrigger) {
+                if (this.channel.relationsCount.actionTriggers > 0 || isActionTrigger) {
                     this.availableTabs.push({
                         route: 'channel.actionTriggers',
                         header: 'Action triggers', // i18n
-                        count: () => this.channel.actionTriggersIds?.length + (isActionTrigger ? 1 : 0),
+                        count: () => this.channel.relationsCount.actionTriggers + (isActionTrigger ? 1 : 0),
                     });
                 }
                 if (hasActions) {
@@ -149,6 +151,12 @@
             }
             this.channelUpdatedListener = () => this.detectAvailableTabs();
             EventBus.$on('channel-updated', this.channelUpdatedListener);
+        },
+        computed: {
+            channel() {
+                return this.channelsStore.all[this.channelId];
+            },
+            ...mapStores(useChannelsStore),
         },
         beforeDestroy() {
             EventBus.$off('channel-updated', this.channelUpdatedListener);

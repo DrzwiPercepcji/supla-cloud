@@ -352,13 +352,24 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
     public static function gettingChannelStateDataProvider() {
         return [
             [1, 'IS-', "DISCONNECTED:1\n", ['connected' => false]],
-            [1, 'IS-', "CONNECTED:1\n", ['connected' => true, 'connectedCode' => ConnectionStatus::CONNECTED]],
-            [1, 'IS-', "CONNECTED_BUT_NOT_AVAILABLE:1\n", ['connected' => true, 'connectedCode' => ConnectionStatus::CONNECTED_NOT_AVAILABLE]],
+            [1, 'IS-', "CONNECTED:1\n", ['connected' => true, 'connectedCode' => ConnectionStatus::CONNECTED()->getKey()]],
+            [
+                1,
+                'IS-',
+                "CONNECTED_BUT_NOT_AVAILABLE:1\n",
+                ['connected' => true, 'connectedCode' => ConnectionStatus::CONNECTED_NOT_AVAILABLE()->getKey()],
+            ],
             [
                 1,
                 'IS-',
                 "OFFLINE_REMOTE_WAKEUP_NOT_SUPPORTED:1\n",
-                ['connected' => false, 'connectedCode' => ConnectionStatus::OFFLINE_REMOTE_WAKEUP_NOT_SUPPORTED],
+                ['connected' => false, 'connectedCode' => ConnectionStatus::OFFLINE_REMOTE_WAKEUP_NOT_SUPPORTED()->getKey()],
+            ],
+            [
+                1,
+                'IS-',
+                "FIRMWARE_UPDATE_ONGOING:1\n",
+                ['connected' => true, 'connectedCode' => ConnectionStatus::FIRMWARE_UPDATE_ONGOING()->getKey()],
             ],
             [1, 'GET-RELAY-VALUE:1,1,1', 'VALUE:1,0', ['on' => true]],
             [1, 'GET-RELAY-VALUE:1,1,1', 'VALUE:0,0', ['on' => false, 'currentOverload' => false]],
@@ -1090,7 +1101,18 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
             'action' => 'recalibrate',
         ]);
         $this->assertStatusCode(200, $client->getResponse());
-        $this->assertContains("RECALIBRATE:1,{$anotherDevice->getId()},{$measurementChannelId}", SuplaServerMock::$executedCommands);
+        $this->assertSuplaCommandExecuted("RECALIBRATE:1,{$anotherDevice->getId()},{$measurementChannelId}");
+    }
+
+    public function testMutingAlarm() {
+        $septicDevice = (new DevicesFixture())->setObjectManager($this->getEntityManager())->createDeviceSeptic($this->location);
+        $tankChannel = $septicDevice->getChannels()[0];
+        $client = $this->createAuthenticatedClient();
+        $client->apiRequestV24('PATCH', "/api/channels/{$tankChannel->getId()}/settings", [
+            'action' => 'muteAlarm',
+        ]);
+        $this->assertStatusCode(200, $client->getResponse());
+        $this->assertSuplaCommandExecuted("MUTE-ALARM:1,{$septicDevice->getId()},{$tankChannel->getId()}");
     }
 
     public function testFetchingActionTriggers() {
@@ -1307,13 +1329,13 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
         $this->getEntityManager()->flush();
         $client = $this->createAuthenticatedClient();
         $client->apiRequestV3('PUT', '/api/channels/' . $channel->getId(), [
-            'config' => ['temperatureAdjustment' => 11],
+            'config' => ['temperatureAdjustment' => 9],
             'configBefore' => ['temperatureAdjustment' => 10],
         ]);
         $this->assertStatusCode(200, $client->getResponse());
         $channel = $this->freshEntity($channel);
         $config = $channelParamConfigTranslator->getConfig($channel);
-        $this->assertEquals(11, $config['temperatureAdjustment']);
+        $this->assertEquals(9, $config['temperatureAdjustment']);
         return $channel->getId();
     }
 
@@ -1321,7 +1343,7 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
     public function testCantUpdateWithoutConfigBefore(int $channelId) {
         $client = $this->createAuthenticatedClient();
         $client->apiRequestV3('PUT', '/api/channels/' . $channelId . '?safe=true', [
-            'config' => ['temperatureAdjustment' => 11],
+            'config' => ['temperatureAdjustment' => 9],
         ]);
         $this->assertStatusCode(400, $client->getResponse());
     }
@@ -1347,7 +1369,7 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
         $this->assertStatusCode(409, $client->getResponse());
         $content = json_decode($client->getResponse()->getContent(), true);
         $this->assertArrayHasKey('details', $content);
-        $this->assertEquals(11, $content['details']['config']['temperatureAdjustment']);
+        $this->assertEquals(9, $content['details']['config']['temperatureAdjustment']);
         $this->assertEquals('temperatureAdjustment', $content['details']['conflictingField']);
     }
 
@@ -1355,7 +1377,7 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
     public function testUpdatingConfigWhenBeforeDifferentButCurrentTheSame(int $channelId) {
         $client = $this->createAuthenticatedClient();
         $client->apiRequestV3('PUT', '/api/channels/' . $channelId, [
-            'config' => ['temperatureAdjustment' => 11],
+            'config' => ['temperatureAdjustment' => 9],
             'configBefore' => ['temperatureAdjustment' => 12],
         ]);
         $this->assertStatusCode(200, $client->getResponse());
@@ -1608,12 +1630,13 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
         $sonoff = $this->createDeviceSonoff($this->location);
         EntityUtils::setField($sonoff, 'flags', IoDeviceFlags::ALWAYS_ALLOW_CHANNEL_DELETION);
         $sonoff = $this->persist($sonoff);
-        $this->assertTrue($sonoff->isChannelDeletionAvailable());
         $thermometer = $sonoff->getChannels()[1];
+        $this->assertTrue($thermometer->isDeletable());
         $client = $this->createAuthenticatedClient();
         $this->getEntityManager()->clear();
         $client->request('DELETE', "/api/channels/{$thermometer->getId()}");
         $this->assertStatusCode(204, $client->getResponse());
+        $this->getEntityManager()->clear();
         $sonoff = $this->freshEntity($sonoff);
         $this->assertCount(2, $sonoff->getChannels());
         $this->assertFalse(EntityUtils::getField($sonoff, 'channelAdditionBlocked'));
@@ -1628,12 +1651,13 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
             IoDeviceFlags::ALWAYS_ALLOW_CHANNEL_DELETION | IoDeviceFlags::BLOCK_ADDING_CHANNELS_AFTER_DELETION
         );
         $sonoff = $this->persist($sonoff);
-        $this->assertTrue($sonoff->isChannelDeletionAvailable());
+        $this->assertTrue(IoDeviceFlags::ALWAYS_ALLOW_CHANNEL_DELETION()->isOn($sonoff->getFlagsInt()));
         $thermometer = $sonoff->getChannels()[1];
         $client = $this->createAuthenticatedClient();
         $this->getEntityManager()->clear();
         $client->request('DELETE', "/api/channels/{$thermometer->getId()}");
         $this->assertStatusCode(204, $client->getResponse());
+        $this->getEntityManager()->clear();
         $sonoff = $this->freshEntity($sonoff);
         $this->assertCount(2, $sonoff->getChannels());
         $this->assertTrue(EntityUtils::getField($sonoff, 'channelAdditionBlocked'));
@@ -1650,6 +1674,18 @@ class ChannelControllerIntegrationTest extends IntegrationTestCase {
         $this->assertStatusCode(204, $client->getResponse());
         $sonoff = $this->freshEntity($sonoff);
         $this->assertCount(2, $sonoff->getChannels());
+    }
+
+    public function testDeletingChannelFromSubdevicesOnly() {
+        $sonoff = $this->createDeviceSonoff($this->location);
+        EntityUtils::setField($sonoff, 'flags', IoDeviceFlags::ALWAYS_ALLOW_SUBDEVICE_CHANNEL_DELETION);
+        $sonoff = $this->persist($sonoff);
+        $switch = $sonoff->getChannels()[0];
+        EntityUtils::setField($switch, 'subDeviceId', 1);
+        $switch = $this->persist($switch);
+        $thermometer = $sonoff->getChannels()[1];
+        $this->assertTrue($switch->isDeletable());
+        $this->assertFalse($thermometer->isDeletable());
     }
 
     public function testDeletingChannelWithAskingAboutDependencies() {

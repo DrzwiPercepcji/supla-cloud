@@ -37,7 +37,15 @@
         <dl v-for="alarm in availableAlarms" :key="alarm">
             <dd>{{ $t(`tank_alarm_${alarm}`) }}</dd>
             <dt>
-                <div class="dropdown">
+                <NumberInput
+                    v-model="channel.config[alarm]"
+                    v-if="fillLevelInFullRange"
+                    :min="0"
+                    :max="100"
+                    suffix=" %"
+                    class="form-control text-center mt-2"
+                    @input="emit('change')"/>
+                <div class="dropdown" v-else>
                     <button class="btn btn-default dropdown-toggle btn-block btn-wrapped"
                         type="button"
                         data-toggle="dropdown">
@@ -49,11 +57,11 @@
                     <ul class="dropdown-menu">
                         <li>
                             <a @click="channel.config[alarm] = null; emit('change')"
-                                v-show="channel.config[alarm]">{{ $t('Disabled') }}</a>
+                                v-show="channel.config[alarm] !== null">{{ $t('Disabled') }}</a>
                         </li>
                         <li v-for="percent in availableFillLevels" :key="percent">
                             <a @click="channel.config[alarm] = percent; emit('change')"
-                                v-show="percent != channel.config[alarm]">{{ percent }}%</a>
+                                v-show="percent !== channel.config[alarm]">{{ percent }}%</a>
                         </li>
                     </ul>
                 </div>
@@ -92,7 +100,8 @@
             emit('change');
         }
     });
-    const availableFillLevels = computed(() => uniq([0, ...levelSensorsDef.value.map(def => +def.fillLevel)]).sort());
+    const availableFillLevels = computed(() => uniq([0, ...levelSensorsDef.value.map(def => +def.fillLevel)]).sort((a, b) => a - b));
+    const fillLevelInFullRange = computed(() => props.channel.config.fillLevelReportingInFullRange);
 
     const availableAlarms = ['warningAboveLevel', 'alarmAboveLevel', 'warningBelowLevel', 'alarmBelowLevel'];
 

@@ -78,6 +78,7 @@ use Symfony\Component\HttpFoundation\Response;
  *   @OA\Property(property="userIconId", type="integer"),
  *   @OA\Property(property="userIcon", ref="#/components/schemas/UserIcon", description="User Icon, if requested by the `include` param"),
  *   @OA\Property(property="connected", type="boolean"),
+ *   @OA\Property(property="deletable", type="boolean"),
  *   @OA\Property(property="relationsCount", description="Counts of related entities.",
  *     @OA\Property(property="channelGroups", type="integer"),
  *     @OA\Property(property="directLinks", type="integer"),
@@ -542,12 +543,19 @@ class ChannelController extends RestController {
         Request $request,
         IODeviceChannel $channel,
         SubjectConfigTranslator $paramConfigTranslator,
+        ChannelStateGetter $channelStateGetter,
         SuplaOcrClient $ocr
     ) {
         $body = json_decode($request->getContent(), true);
         Assertion::keyExists($body, 'action', 'Missing action.');
         $channelConfig = $paramConfigTranslator->getConfig($channel);
-        $channel = $this->transactional(function (EntityManagerInterface $em) use ($ocr, $body, $channel, $channelConfig) {
+        $channel = $this->transactional(function (EntityManagerInterface $em) use (
+            $channelStateGetter,
+            $ocr,
+            $body,
+            $channel,
+            $channelConfig
+        ) {
             $action = $body['action'];
             if ($action === 'resetCounters') {
                 Assertion::true($channelConfig['resetCountersAvailable'] ?? false, 'Cannot reset counters of this channel.');
@@ -560,6 +568,11 @@ class ChannelController extends RestController {
                 Assertion::true($channelConfig['recalibrateAvailable'] ?? false, 'Cannot recalibrate this channel.');
                 $result = $this->suplaServer->channelAction($channel, 'RECALIBRATE');
                 Assertion::true($result, 'Could not recalibrate.');
+            } elseif ($action === 'muteAlarm') {
+                $state = $channelStateGetter->getState($channel);
+                Assertion::keyExists($state, 'soundAlarmOn', 'Cannot mute alarm for this channel.');
+                $result = $this->suplaServer->channelAction($channel, 'MUTE-ALARM');
+                Assertion::true($result, 'Could not mute alarm.');
             } elseif ($action === 'takeOcrPhoto') {
                 Assertion::keyExists($channelConfig, 'ocr', 'Cannot take OCR photo.');
                 $result = $this->suplaServer->channelAction($channel, 'TAKE-OCR-PHOTO');
@@ -605,9 +618,9 @@ class ChannelController extends RestController {
         ChannelDependencies $channelDependencies,
         HiddenReadOnlyConfigFieldsUserConfigTranslator $hiddenConfigTranslator
     ) {
-        $this->entityManager->detach($channel->getIoDevice());
-        $device = $this->entityManager->find(IODevice::class, $channel->getIoDevice()->getId());
-        if (!$device->isChannelDeletionAvailable() && !$channel->getConflictDetails()) {
+        $this->entityManager->detach($channel);
+        $channel = $this->entityManager->find(IODeviceChannel::class, $channel->getId());
+        if (!$channel->isDeletable()) {
             throw new ApiException('Cannot delete this channel.', Response::HTTP_FORBIDDEN);
         }
         if (filter_var($request->get('safe', false), FILTER_VALIDATE_BOOLEAN)) {
@@ -639,7 +652,7 @@ class ChannelController extends RestController {
                 return $view;
             }
         }
-        $this->transactional(function (EntityManagerInterface $em) use ($device, $channelDependencies, $channel, $hiddenConfigTranslator) {
+        $this->transactional(function (EntityManagerInterface $em) use ($channelDependencies, $channel, $hiddenConfigTranslator) {
             $channelsToRemoveWith = $channelDependencies->getChannelsToRemoveWith($channel);
             $idsToRemove = EntityUtils::mapToIds($channelsToRemoveWith);
             $idsToRemove[] = $channel->getId();
@@ -653,12 +666,13 @@ class ChannelController extends RestController {
             if ($channel->getSubDeviceId() > 0) {
                 $subDevice = $em->getRepository(SubDevice::class)->findOneBy([
                     'id' => $channel->getSubDeviceId(),
-                    'device' => $device,
+                    'device' => $channel->getIoDevice(),
                 ]);
                 if ($subDevice) {
                     $em->remove($subDevice);
                 }
             }
+            $device = $em->find(IODevice::class, $channel->getIoDevice()->getId());
             $em->remove($channel);
             $device->onChannelRemoved();
             $em->persist($device);

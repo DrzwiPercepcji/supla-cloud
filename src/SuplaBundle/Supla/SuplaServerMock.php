@@ -78,8 +78,10 @@ class SuplaServerMock extends SuplaServer {
                 if ($this->faker->boolean($isTests ? 100 : 95)) {
                     return "CONNECTED:$match[3]\n";
                 } elseif ($this->faker->boolean()) {
-                    if ($this->faker->boolean()) {
+                    if ($this->faker->boolean(33)) {
                         return "CONNECTED_BUT_NOT_AVAILABLE:$match[3]\n";
+                    } elseif ($this->faker->boolean(33)) {
+                        return "FIRMWARE_UPDATE_ONGOING:$match[3]\n";
                     } else {
                         return "OFFLINE_REMOTE_WAKEUP_NOT_SUPPORTED:$match[3]\n";
                     }
@@ -111,7 +113,7 @@ class SuplaServerMock extends SuplaServer {
             return 'OK:HURRA';
         } elseif (preg_match('#^DEVICE-SET-TIME:.+$#', $cmd, $match)) {
             return 'OK:HURRA';
-        } elseif (preg_match('#^(RESET-COUNTERS|RECALIBRATE|TAKE-OCR-PHOTO):(\d+),(\d+),(\d+)$#', $cmd, $match)) {
+        } elseif (preg_match('#^(RESET-COUNTERS|RECALIBRATE|TAKE-OCR-PHOTO|MUTE-ALARM):(\d+),(\d+),(\d+)$#', $cmd, $match)) {
             return "OK:$match[4]\n";
         } elseif (preg_match('#^(EXECUTE|INTERRUPT|INTERRUPT-AND-EXECUTE)-SCENE:.+$#', $cmd, $match)) {
             return 'OK:HURRA';
@@ -122,7 +124,7 @@ class SuplaServerMock extends SuplaServer {
         } elseif (preg_match('#^GET-(VALVE)-VALUE:(\d+),(\d+),(\d+)#', $cmd, $match)) {
             return 'VALUE:' . rand(0, 1) . ',' . rand(0, 3);
         } elseif (preg_match('#^GET-(CONTAINER)-VALUE:(\d+),(\d+),(\d+)#', $cmd, $match)) {
-            return 'VALUE:0' . rand(0, 101);
+            return 'VALUE:' . rand(0, 101) . ',' . rand(0, 16);
         } elseif (preg_match('#^GET-(RELAY)-VALUE:(\d+),(\d+),(\d+)#', $cmd, $match)) {
             $flag = $isTests ? 0 : rand(0, 1);
             return 'VALUE:' . rand(0, 1) . ',' . $flag;

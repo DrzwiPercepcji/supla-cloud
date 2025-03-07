@@ -19,7 +19,8 @@
                     </div>
                 </div>
                 <ChannelConflictDetailsWarning :channel="channel" v-if="channel.conflictDetails"/>
-                <div class="alert alert-warning" v-if="channelsStore.all[channel.id]?.state?.connectedCode === 3">
+                <div class="alert alert-warning"
+                    v-if="channelsStore.all[channel.id]?.state?.connectedCode === 'OFFLINE_REMOTE_WAKEUP_NOT_SUPPORTED'">
                     {{ $t('This device cannot be remotely awakened. We are awaiting communication from the device...') }}
                 </div>
                 <div class="row">
@@ -136,6 +137,7 @@
                                 <channel-state-table class="py-3"
                                     :channel="channel"
                                     v-if="channelFunctionIsChosen && !loading"></channel-state-table>
+                                <ChannelMuteAlarmButton :channel="channelsStore.all[channel.id] || channel"/>
                             </div>
                         </div>
                         <div class="details-page-block" v-if="hasActionsToExecute">
@@ -149,7 +151,7 @@
                 </div>
             </div>
 
-            <channel-details-tabs v-if="channel && !loading" :channel="channel"></channel-details-tabs>
+            <ChannelDetailsTabs v-if="channel && !loading" :channel-id="channel.id"/>
 
         </loading-cover>
 
@@ -204,7 +206,7 @@
 </template>
 
 <script>
-    import {channelTitle, deviceTitle} from "../common/filters";
+    import {channelTitle} from "../common/filters";
     import FunctionIcon from "./function-icon";
     import ChannelParamsForm from "./params/channel-params-form";
     import SquareLocationChooser from "../locations/square-location-chooser";
@@ -228,10 +230,12 @@
     import {mapStores} from "pinia";
     import {useChannelsStore} from "@/stores/channels-store";
     import ChannelDependenciesList from "@/channels/channel-dependencies-list.vue";
+    import ChannelMuteAlarmButton from "@/channels/action/channel-mute-alarm-button.vue";
 
     export default {
         props: ['id'],
         components: {
+            ChannelMuteAlarmButton,
             ChannelDependenciesList,
             ChannelDeleteButton,
             ChannelConflictDetailsWarning,
@@ -329,6 +333,7 @@
                 this.loading = true;
                 return this.$http.put(`channels/${this.id}${safe ? '?safe=1' : ''}`, this.channel, {skipErrorHandler: [409]})
                     .then(response => extendObject(this.channel, response.body))
+                    .then(() => this.channelsStore.fetchChannel(this.channel.id))
                     .then(() => {
                         this.saveConfigConfirmationObject = undefined;
                         this.hasPendingChanges = false;
@@ -375,10 +380,10 @@
             },
             refreshChannelConfig(showLoading = true) {
                 this.loading = showLoading;
-                this.channelRequest().then(({body}) => {
-                    this.channel.relationsCount = body.relationsCount;
-                    this.channel.config = body.config;
-                    this.channel.configBefore = body.configBefore;
+                this.channelsStore.fetchChannel(this.channel.id).then((channel) => {
+                    this.channel.relationsCount = channel.relationsCount;
+                    this.channel.config = channel.config;
+                    this.channel.configBefore = channel.configBefore;
                     this.configConflictDetected = false;
                     this.loading = false;
                 });
@@ -387,9 +392,6 @@
         computed: {
             channelTitle() {
                 return channelTitle(this.channel);
-            },
-            deviceTitle() {
-                return deviceTitle(this.channel.iodevice);
             },
             frozenShownInClientsState() {
                 if (this.channel.config.controllingChannelId || this.channel.config.controllingSecondaryChannelId) {

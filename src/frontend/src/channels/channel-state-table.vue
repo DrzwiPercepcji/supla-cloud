@@ -110,8 +110,11 @@
             <div v-if="currentState.connected === false">
                 <span class="label label-danger">{{ $t('Disconnected') }}</span>
             </div>
-            <div v-if="currentState.connectedCode === 2">
+            <div v-if="currentState.connectedCode === 'CONNECTED_NOT_AVAILABLE'">
                 <span class="label label-warning">{{ $t('Not available') }}</span>
+            </div>
+            <div v-if="currentState.connectedCode === 'FIRMWARE_UPDATE_ONGOING'">
+                <span class="label label-info">{{ $t('Updating...') }}</span>
             </div>
             <div v-if="currentState.currentOverload === true">
                 <span class="label label-danger">{{ $t('Current Overload') }}</span>
@@ -127,6 +130,18 @@
             </div>
             <div v-if="currentState.forcedOffBySensor === true">
                 <span class="label label-info">{{ $t('Forced off by sensor') }}</span>
+            </div>
+            <div v-if="currentState.warningLevel === true">
+                <span class="label label-warning">{{ $t('Warning level') }}</span>
+            </div>
+            <div v-if="currentState.alarmLevel === true">
+                <span class="label label-danger">{{ $t('Alarm level') }}</span>
+            </div>
+            <div v-if="currentState.invalidSensorState === true">
+                <span class="label label-danger">{{ $t('Invalid sensor state') }}</span>
+            </div>
+            <div v-if="currentState.soundAlarmOn === true">
+                <span class="label label-info">{{ $t('Sound alarm on') }}</span>
             </div>
             <div v-if="currentState.calibrationError === true">
                 <span class="label label-danger">{{ $t('Calibration error') }}</span>

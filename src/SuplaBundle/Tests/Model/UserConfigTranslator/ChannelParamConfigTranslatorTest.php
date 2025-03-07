@@ -25,7 +25,7 @@ use SuplaBundle\Enums\ChannelFunctionBitsFlags;
 use SuplaBundle\Model\UserConfigTranslator\DigiglassParamTranslator;
 use SuplaBundle\Model\UserConfigTranslator\ElectricityMeterUserConfigTranslator;
 use SuplaBundle\Model\UserConfigTranslator\GeneralPurposeMeasurementConfigTranslator;
-use SuplaBundle\Model\UserConfigTranslator\HumidityAdjustmentParamTranslator;
+use SuplaBundle\Model\UserConfigTranslator\HumidityAdjustmentConfigTranslator;
 use SuplaBundle\Model\UserConfigTranslator\ImpulseCounterUserConfigTranslator;
 use SuplaBundle\Model\UserConfigTranslator\InvertedLogicParamTranslator;
 use SuplaBundle\Model\UserConfigTranslator\NumberOfAttemptsToOpenOrCloseParamTranslator;
@@ -34,7 +34,7 @@ use SuplaBundle\Model\UserConfigTranslator\RelayTimeMsUserConfigTranslator;
 use SuplaBundle\Model\UserConfigTranslator\RelayTimeSUserConfigTranslator;
 use SuplaBundle\Model\UserConfigTranslator\RollerShutterUserConfigTranslator;
 use SuplaBundle\Model\UserConfigTranslator\SubjectConfigTranslator;
-use SuplaBundle\Model\UserConfigTranslator\TemperatureAdjustmentParamTranslator;
+use SuplaBundle\Model\UserConfigTranslator\TemperatureAdjustmentConfigTranslator;
 
 class ChannelParamConfigTranslatorTest extends TestCase {
     /** @var SubjectConfigTranslator */
@@ -48,8 +48,8 @@ class ChannelParamConfigTranslatorTest extends TestCase {
             new OpeningClosingTimeUserConfigTranslator(),
             new ElectricityMeterUserConfigTranslator(),
             new ImpulseCounterUserConfigTranslator(),
-            new HumidityAdjustmentParamTranslator(),
-            new TemperatureAdjustmentParamTranslator(),
+            new HumidityAdjustmentConfigTranslator(),
+            new TemperatureAdjustmentConfigTranslator(),
             new InvertedLogicParamTranslator(),
             new GeneralPurposeMeasurementConfigTranslator(),
             new DigiglassParamTranslator(),
